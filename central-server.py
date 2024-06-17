@@ -8,40 +8,51 @@ socket_list = []
 # Function to handle the connection received
 def listener_module():
     os.system("cls")
-    for soc in socket_list:
-        print(soc)   
+    header = "Socket List"
+    print(f"{header:^40}")  # Centered header
+    print("=" * 40)
+    for i, soc in enumerate(socket_list):
+        peer_name = soc.getpeername()
+        print(f"Connection from  [{i+1}]: Peer Address = {peer_name}")
+    print("Enter 0 To Exit To Main Menu")  
+    print("=" * 40)     
+    
+    # i=0
+    # for soc in socket_list:
+    #     print("f{[i]}",soc.getpeername())
+    #     i=i+1   
     i=int(input("Select:"))
+    if(i== 0):
+        os.system("cls")
+        return
     print(socket_list[i].getpeername())
-    manage_client(socket_list[i], socket_list[i].getpeername())
-    # client_handler = threading.Thread(target=manage_client, args=(socket_list[i], socket_list[i].getpeername()))
-    # client_handler.start()
-    os.system("cls")
+    response = manage_client(socket_list[i-1], socket_list[i-1].getpeername())
+    if(response == "nuke"):
+        return
+    if(response == "exit"):
+        listener_module()
 
 def manage_client(client_socket, client_address):
+    res=""
     print(f"We have an incoming connection request accepted from {client_address}")
     while True:
         try:
             message = client_socket.recv(10240)
-            if (message.decode('utf-8') == "nuke"):
-                client_socket.close()
-                socket_list.remove(client_socket)
-                print(f"Connection from {client_address} has been closed")
-                break
-            if message.decode('utf-8') == "exit":
-                break
             print(f"Received from {client_address}: {message.decode('utf-8')}")
             response = input(">> ")
             if (message.decode('utf-8') == "nuke" or response == "nuke"):
                 client_socket.close()
                 socket_list.remove(client_socket)
                 print(f"Connection from {client_address} has been closed")
+                res="nuke"
                 break
             if message.decode('utf-8') == "exit" or response == "exit":
+                res="exit"
                 break
             client_socket.send(response.encode('utf-8'))
         except ConnectionResetError:
             break
-    
+    return res    
     
 
 # Server function to accept connections
