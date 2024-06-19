@@ -63,13 +63,10 @@ def  create_client(server_ip, server_port):
                     try:
                         _, file_name = command.split(" ", 1)
                         client_socket.send("READY".encode())
-                        with open(file_name, "wb") as file:
-                            while True:
-                                chunk = client_socket.recv(1024)
-                                if chunk.decode() == "DONE":
-                                    print("!!!")
-                                    break
-                                file.write(chunk)
+                        with open(file_name, "rb") as file:
+                            while chunk := file.read(1024):
+                                client_socket.send(chunk)
+                            client_socket.send("DONE".encode())
                     except Exception as e:
                         client_socket.send(f"Error: {e}".encode())
                 else:
